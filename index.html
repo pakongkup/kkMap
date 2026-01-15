@@ -59,9 +59,11 @@
         // Initialize Map centered on Khon Kaen
         const map = L.map('map').setView([16.4322, 102.8236], 9);
 
-        // Add OpenStreetMap layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
+        // Add CartoDB Positron layer (Gray/Light Theme)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
         }).addTo(map);
 
         // --- Custom Panes for Z-Index Ordering ---
@@ -134,8 +136,8 @@ WHOLESALES,16.521942,102.220452`;
                         fillColor: '#3b82f6',
                         fillOpacity: 0.1, // Increased slightly for visibility over shapes
                         radius: 10000,
-                        weight: 0.3,
-                        dashArray: '1, 1'
+                        weight: 1,
+                        dashArray: '4, 4'
                     }).addTo(circlesLayer);
 
                     bounds.push([lat, lon]);
