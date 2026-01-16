@@ -249,40 +249,37 @@
                         pane: 'shapesPane', // Bottom layer
                         style: function(feature) {
                             // Default styling
-                            let color = "#64748b"; 
-                            let fillColor = "#64748b";
+                            let color = "#3388ff"; 
+                            let fillColor = "#3388ff";
                             let fillOpacity = 0.2;
                             
-                            // Improved Color Logic
                             if (feature.properties) {
-                                // 1. Try to find explicit color properties (flexible lookup)
-                                // Convert all keys to lowercase to find 'Color', 'COLOR', 'fill', etc.
-                                const lowerProps = {};
-                                for (let key in feature.properties) {
-                                    if (feature.properties[key]) {
-                                        lowerProps[key.toLowerCase()] = feature.properties[key];
-                                    }
-                                }
-
-                                const explicitColor = lowerProps.color || lowerProps.fill || lowerProps.stroke || lowerProps.hex || lowerProps['marker-color'];
-
-                                if (explicitColor) {
-                                    color = explicitColor;
-                                    fillColor = explicitColor;
+                                // 1. Try explicit properties
+                                const potentialColor = feature.properties.color || 
+                                                       feature.properties.fill || 
+                                                       feature.properties.fillColor || 
+                                                       feature.properties.stroke || 
+                                                       feature.properties.hex;
+                                
+                                if (potentialColor && (potentialColor.startsWith('#') || potentialColor.startsWith('rgb'))) {
+                                    color = potentialColor;
+                                    fillColor = potentialColor;
                                 } else {
-                                    // 2. Fallback: Search in property values (Name, Description, etc.)
-                                    const propsStr = JSON.stringify(feature.properties).toLowerCase();
-                                    
-                                    if (propsStr.includes("red") || propsStr.includes("แดง")) { 
-                                        color = "#ef4444"; fillColor = "#ef4444"; 
-                                    } else if (propsStr.includes("green") || propsStr.includes("เขียว")) { 
-                                        color = "#22c55e"; fillColor = "#22c55e"; 
-                                    } else if (propsStr.includes("white") || propsStr.includes("ขาว")) { 
-                                        color = "#333333"; // Use dark border for white shape visibility
-                                        fillColor = "#ffffff"; 
-                                        fillOpacity = 0.6; // Higher opacity for white
-                                    } else if (propsStr.includes("blue") || propsStr.includes("น้ำเงิน")) { 
-                                        color = "#3b82f6"; fillColor = "#3b82f6"; 
+                                    // 2. Scan properties for hex
+                                    for (const key in feature.properties) {
+                                        const val = String(feature.properties[key]);
+                                        if (val.match(/^#([0-9A-F]{3}){1,2}$/i)) {
+                                            color = val;
+                                            fillColor = val;
+                                            break;
+                                        }
+                                    }
+                                    // 3. Fallback color names
+                                    if (color === "#3388ff") {
+                                        const propsStr = JSON.stringify(feature.properties).toLowerCase();
+                                        if (propsStr.includes("red")) { color = "#ff0000"; fillColor = "#ff0000"; }
+                                        else if (propsStr.includes("green")) { color = "#00ff00"; fillColor = "#00ff00"; }
+                                        else if (propsStr.includes("white")) { color = "#ffffff"; fillColor = "#ffffff"; }
                                     }
                                 }
                             }
