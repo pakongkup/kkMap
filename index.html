@@ -234,7 +234,7 @@
             });
         }
 
-        // --- GeoJSON Handling (Same as before) ---
+        // --- GeoJSON Handling (Improved Color Logic) ---
         function handleGeoJsonUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -248,19 +248,43 @@
                     const geoLayer = L.geoJSON(geoData, {
                         pane: 'shapesPane', // Bottom layer
                         style: function(feature) {
-                            let color = "#64748b"; // Default Slate
+                            // Default styling
+                            let color = "#64748b"; 
                             let fillColor = "#64748b";
+                            let fillOpacity = 0.2;
                             
-                            // Color Logic
+                            // Improved Color Logic
                             if (feature.properties) {
-                                const propsStr = JSON.stringify(feature.properties).toLowerCase();
-                                const potentialColor = feature.properties.color || feature.properties.hex;
+                                // 1. Try to find explicit color properties (flexible lookup)
+                                // Convert all keys to lowercase to find 'Color', 'COLOR', 'fill', etc.
+                                const lowerProps = {};
+                                for (let key in feature.properties) {
+                                    if (feature.properties[key]) {
+                                        lowerProps[key.toLowerCase()] = feature.properties[key];
+                                    }
+                                }
 
-                                if (potentialColor && potentialColor.startsWith('#')) {
-                                    color = potentialColor; fillColor = potentialColor;
-                                } else if (propsStr.includes("red")) { color = "#ef4444"; fillColor = "#ef4444"; }
-                                else if (propsStr.includes("green")) { color = "#22c55e"; fillColor = "#22c55e"; }
-                                else if (propsStr.includes("white")) { color = "#ffffff"; fillColor = "#ffffff"; }
+                                const explicitColor = lowerProps.color || lowerProps.fill || lowerProps.stroke || lowerProps.hex || lowerProps['marker-color'];
+
+                                if (explicitColor) {
+                                    color = explicitColor;
+                                    fillColor = explicitColor;
+                                } else {
+                                    // 2. Fallback: Search in property values (Name, Description, etc.)
+                                    const propsStr = JSON.stringify(feature.properties).toLowerCase();
+                                    
+                                    if (propsStr.includes("red") || propsStr.includes("แดง")) { 
+                                        color = "#ef4444"; fillColor = "#ef4444"; 
+                                    } else if (propsStr.includes("green") || propsStr.includes("เขียว")) { 
+                                        color = "#22c55e"; fillColor = "#22c55e"; 
+                                    } else if (propsStr.includes("white") || propsStr.includes("ขาว")) { 
+                                        color = "#333333"; // Use dark border for white shape visibility
+                                        fillColor = "#ffffff"; 
+                                        fillOpacity = 0.6; // Higher opacity for white
+                                    } else if (propsStr.includes("blue") || propsStr.includes("น้ำเงิน")) { 
+                                        color = "#3b82f6"; fillColor = "#3b82f6"; 
+                                    }
+                                }
                             }
                             
                             return {
@@ -268,7 +292,7 @@
                                 fillColor: fillColor,
                                 weight: 2,
                                 opacity: 0.8,
-                                fillOpacity: 0.2
+                                fillOpacity: fillOpacity
                             };
                         },
                         onEachFeature: (f, l) => {
