@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Map Visualization Coverage 10km</title>
+    <title>Multi-Group Map Coverage</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -11,106 +11,167 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Sarabun', sans-serif; }
-        #map { height: 70vh; z-index: 1; }
-        .legend { background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
+        #map { height: 65vh; z-index: 1; }
+        /* Custom scrollbar for controls if needed on small screens */
+        .controls-container::-webkit-scrollbar { height: 6px; }
+        .controls-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     </style>
 </head>
-<body class="bg-gray-100 h-screen flex flex-col">
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
-    <!-- Header -->
-    <header class="bg-blue-600 text-white p-4 shadow-md">
-        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <h1 class="text-xl font-bold">📍 แผนที่ Coverage 10km (ขอนแก่น)</h1>
+    <!-- Header & Controls -->
+    <header class="bg-white shadow-md z-20 flex-none">
+        <div class="bg-blue-600 text-white p-2 px-4 flex justify-between items-center">
+            <h1 class="text-lg font-bold flex items-center gap-2">
+                📍 Coverage Comparison Map
+            </h1>
+            <div class="text-xs text-blue-100 hidden sm:block">เปรียบเทียบรัศมีพื้นที่ให้บริการ</div>
+        </div>
+
+        <!-- Controls Area -->
+        <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 border-b">
             
-            <div class="flex flex-wrap gap-2 justify-center md:justify-end">
-                <!-- CSV Upload -->
-                <label class="bg-white text-blue-600 hover:bg-gray-100 px-3 py-2 rounded shadow cursor-pointer transition text-sm flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    1. อัปโหลดพิกัด (CSV)
-                    <input type="file" id="csvInput" accept=".csv" class="hidden" onchange="handleCsvUpload(event)">
-                </label>
-
-                <!-- GeoJSON Upload -->
-                <label class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded shadow cursor-pointer transition text-sm flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7m0 0L9 17" /></svg>
-                    2. อัปโหลด Shape (JSON)
-                    <input type="file" id="geojsonInput" accept=".json,.geojson" class="hidden" onchange="handleGeoJsonUpload(event)">
-                </label>
-                
-                <button onclick="loadSampleData()" class="bg-blue-800 hover:bg-blue-900 text-white px-3 py-2 rounded shadow transition text-sm">
-                    โหลดตัวอย่าง
-                </button>
+            <!-- Control Group 1: RED -->
+            <div class="bg-white p-3 rounded-lg shadow-sm border-l-4 border-red-500">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-red-600 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span> กลุ่ม 1 (สีแดง)
+                    </h3>
+                    <span id="labelRadiusRed" class="text-xs font-mono bg-red-100 text-red-800 px-2 py-0.5 rounded">10 km</span>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="cursor-pointer bg-red-50 hover:bg-red-100 text-red-600 text-sm py-1.5 px-3 rounded border border-red-200 text-center transition">
+                        📂 อัปโหลด CSV
+                        <input type="file" accept=".csv" class="hidden" onchange="handleUpload(event, 'red')">
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-400">รัศมี:</span>
+                        <input type="range" id="sliderRed" min="1" max="50" value="10" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-500" oninput="updateRadius('red', this.value)">
+                    </div>
+                </div>
             </div>
+
+            <!-- Control Group 2: BLUE -->
+            <div class="bg-white p-3 rounded-lg shadow-sm border-l-4 border-blue-500">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-blue-600 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> กลุ่ม 2 (สีน้ำเงิน)
+                    </h3>
+                    <span id="labelRadiusBlue" class="text-xs font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded">10 km</span>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="cursor-pointer bg-blue-50 hover:bg-blue-100 text-blue-600 text-sm py-1.5 px-3 rounded border border-blue-200 text-center transition">
+                        📂 อัปโหลด CSV
+                        <input type="file" accept=".csv" class="hidden" onchange="handleUpload(event, 'blue')">
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-400">รัศมี:</span>
+                        <input type="range" id="sliderBlue" min="1" max="50" value="10" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500" oninput="updateRadius('blue', this.value)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Controls: Shape & Tools -->
+            <div class="bg-white p-3 rounded-lg shadow-sm border-l-4 border-gray-400 flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-gray-600">เครื่องมือเสริม</h3>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="cursor-pointer bg-green-50 hover:bg-green-100 text-green-700 text-sm py-1.5 px-3 rounded border border-green-200 text-center transition">
+                        🗺️ อัปโหลด Shape (JSON)
+                        <input type="file" accept=".json,.geojson" class="hidden" onchange="handleGeoJsonUpload(event)">
+                    </label>
+                    <button onclick="loadSampleToRed()" class="text-xs text-gray-500 underline hover:text-gray-800 text-right">
+                        โหลดตัวอย่างลงกลุ่มสีแดง
+                    </button>
+                </div>
+            </div>
+
         </div>
     </header>
 
-    <!-- Stats Bar -->
-    <div class="bg-white p-2 shadow-sm z-10">
-        <div class="container mx-auto flex justify-between text-sm text-gray-600">
-            <span id="pointCount">จำนวนจุด: 0</span>
-            <span id="statusMsg">รอการอัปโหลดไฟล์...</span>
+    <!-- Map Container -->
+    <div id="map" class="flex-grow w-full relative">
+        <!-- Legend Overlay -->
+        <div class="absolute bottom-4 right-4 bg-white p-3 rounded shadow-lg z-[500] text-sm opacity-90">
+            <div class="font-bold mb-1">สัญลักษณ์</div>
+            <div class="flex items-center gap-2 mb-1"><span class="w-3 h-3 bg-red-500 rounded-full"></span> จุดกลุ่ม 1</div>
+            <div class="flex items-center gap-2 mb-1"><span class="w-3 h-3 bg-blue-500 rounded-full"></span> จุดกลุ่ม 2</div>
+            <div class="flex items-center gap-2"><span class="w-3 h-3 border-2 border-blue-400 bg-blue-100"></span> ขอบเขต Coverage</div>
         </div>
     </div>
-
-    <!-- Map Container -->
-    <div id="map" class="flex-grow w-full"></div>
+    
+    <!-- Status Footer -->
+    <div class="bg-white p-2 border-t text-xs text-gray-500 flex justify-between px-4">
+        <span id="statusLeft">พร้อมใช้งาน</span>
+        <span id="statusRight"></span>
+    </div>
 
     <script>
-        // Initialize Map centered on Khon Kaen
-        const map = L.map('map').setView([16.4322, 102.8236], 9);
+        // --- 1. Map Initialization ---
+        const map = L.map('map').setView([16.4322, 102.8236], 9); // Centered on Khon Kaen
 
-        // Add CartoDB Positron layer (Gray/Light Theme)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
             subdomains: 'abcd',
             maxZoom: 20
         }).addTo(map);
 
-        // --- Custom Panes for Z-Index Ordering ---
-        // This ensures the stacking order regardless of loading order
+        // --- 2. Z-Index Management (Panes) ---
+        // Shapes (Bottom) < Coverage Circles (Middle) < Dots (Top)
+        map.createPane('shapesPane'); map.getPane('shapesPane').style.zIndex = 390;
         
-        // 1. Bottom: Shape Map
-        map.createPane('shapesPane');
-        map.getPane('shapesPane').style.zIndex = 390; 
+        map.createPane('redCoveragePane'); map.getPane('redCoveragePane').style.zIndex = 400;
+        map.createPane('blueCoveragePane'); map.getPane('blueCoveragePane').style.zIndex = 405; // Blue slightly on top of red coverage
+        
+        map.createPane('dotsPane'); map.getPane('dotsPane').style.zIndex = 420;
 
-        // 2. Middle: Coverage Circles
-        map.createPane('coveragePane');
-        map.getPane('coveragePane').style.zIndex = 400;
+        // --- 3. Data Storage & Layers ---
+        const state = {
+            red: { data: [], radius: 10000, color: '#ef4444', layers: { dots: L.layerGroup(), circles: L.layerGroup() } },
+            blue: { data: [], radius: 10000, color: '#3b82f6', layers: { dots: L.layerGroup(), circles: L.layerGroup() } }
+        };
 
-        // 3. Top: Point Dots
-        map.createPane('dotsPane');
-        map.getPane('dotsPane').style.zIndex = 410;
+        // Add layer groups to map
+        state.red.layers.circles.addTo(map);
+        state.red.layers.dots.addTo(map);
+        state.blue.layers.circles.addTo(map);
+        state.blue.layers.dots.addTo(map);
+        
+        const geoJsonLayer = L.layerGroup().addTo(map);
 
+        // --- 4. Logic Functions ---
 
-        // Layers
-        let markersLayer = L.layerGroup().addTo(map);
-        let circlesLayer = L.layerGroup().addTo(map);
-        let geoJsonLayer = L.layerGroup().addTo(map);
+        // Update Radius from Slider
+        function updateRadius(group, valueKm) {
+            const radiusMeters = valueKm * 1000;
+            state[group].radius = radiusMeters;
+            
+            // Update UI Label
+            const labelId = group === 'red' ? 'labelRadiusRed' : 'labelRadiusBlue';
+            document.getElementById(labelId).innerText = `${valueKm} km`;
 
-        // Sample CSV Data
-        const sampleCsvData = `customer_type_makro,lat_w_makro,lon_w_makro
-WHOLESALES,16.455621,102.84292
-WHOLESALES,16.460316,102.827771
-WHOLESALES,16.466022,102.832373
-WHOLESALES,16.467007,102.703539
-WHOLESALES,16.481295,102.839017
-WHOLESALES,16.48471,102.945052
-WHOLESALES,16.488055,102.815405
-WHOLESALES,16.491754,102.431471
-WHOLESALES,16.515662,102.295329
-WHOLESALES,16.521942,102.220452`;
-
-        function updateStatus(count, message) {
-            document.getElementById('pointCount').innerText = `จำนวนจุด: ${count}`;
-            document.getElementById('statusMsg').innerText = message;
+            // Efficiently update existing circles
+            state[group].layers.circles.eachLayer(layer => {
+                layer.setRadius(radiusMeters);
+            });
         }
 
-        // --- CSV Handling ---
-        function plotCsvData(data) {
-            markersLayer.clearLayers();
-            circlesLayer.clearLayers();
+        // Parse and Plot Data
+        function plotData(group, data) {
+            const s = state[group];
+            s.data = data; // Store data
+            s.layers.dots.clearLayers();
+            s.layers.circles.clearLayers();
+
             let count = 0;
             const bounds = [];
+            const paneName = group === 'red' ? 'redCoveragePane' : 'blueCoveragePane';
+            
+            // Styling Config
+            const dotColor = group === 'red' ? '#dc2626' : '#2563eb';
+            const circleColor = group === 'red' ? '#ef4444' : '#3b82f6';
+            const circleFill = group === 'red' ? '#fca5a5' : '#93c5fd';
 
             data.forEach(row => {
                 const lat = parseFloat(row.lat_w_makro || row.latitude || row.lat);
@@ -118,27 +179,28 @@ WHOLESALES,16.521942,102.220452`;
                 const type = row.customer_type_makro || "Unknown";
 
                 if (!isNaN(lat) && !isNaN(lon)) {
-                    // Dot Marker -> Puts in 'dotsPane' (Top)
+                    // 1. Dot Marker (Top)
                     L.circleMarker([lat, lon], {
                         pane: 'dotsPane',
                         radius: 4,
-                        fillColor: "#ff3333",
+                        fillColor: dotColor,
                         color: "#fff",
                         weight: 1,
                         opacity: 1,
-                        fillOpacity: 0.9
-                    }).bindPopup(`<b>Type:</b> ${type}<br><b>Lat:</b> ${lat}<br><b>Lon:</b> ${lon}`).addTo(markersLayer);
+                        fillOpacity: 1
+                    }).bindPopup(`<b>Group:</b> ${group.toUpperCase()}<br><b>Type:</b> ${type}<br><b>Lat:</b> ${lat}<br><b>Lon:</b> ${lon}`)
+                      .addTo(s.layers.dots);
                     
-                    // Coverage Circle -> Puts in 'coveragePane' (Middle)
+                    // 2. Coverage Circle (Middle)
                     L.circle([lat, lon], {
-                        pane: 'coveragePane',
-                        color: 'blue',
-                        fillColor: '#3b82f6',
-                        fillOpacity: 0.1, // Increased slightly for visibility over shapes
-                        radius: 10000,
+                        pane: paneName,
+                        color: circleColor,
+                        fillColor: circleFill,
+                        fillOpacity: 0.15,
+                        radius: s.radius, // Use current radius state
                         weight: 1,
                         dashArray: '4, 4'
-                    }).addTo(circlesLayer);
+                    }).addTo(s.layers.circles);
 
                     bounds.push([lat, lon]);
                     count++;
@@ -146,28 +208,33 @@ WHOLESALES,16.521942,102.220452`;
             });
 
             if (bounds.length > 0) {
+                // Determine bounds to fit: include both red and blue if they exist
+                const allBounds = [...bounds];
+                // Note: ideally we merge bounds from the other group too, but fitting to the NEWEST uploaded data is usually expected UX.
                 map.fitBounds(bounds, { padding: [50, 50] });
-                updateStatus(count, `แสดงจุด ${count} จุดเรียบร้อย`);
+                document.getElementById('statusLeft').innerText = `อัปเดตกลุ่ม ${group === 'red' ? 'สีแดง' : 'สีน้ำเงิน'} : ${count} จุด`;
             }
         }
 
-        function handleCsvUpload(event) {
+        function handleUpload(event, group) {
             const file = event.target.files[0];
             if (!file) return;
+
+            document.getElementById('statusLeft').innerText = `กำลังอ่านไฟล์กลุ่ม ${group}...`;
 
             Papa.parse(file, {
                 header: true,
                 skipEmptyLines: true,
                 complete: function(results) {
-                    plotCsvData(results.data);
+                    plotData(group, results.data);
                 },
                 error: function(err) {
-                    alert("Error parsing CSV");
+                    alert("เกิดข้อผิดพลาดในการอ่านไฟล์ CSV");
                 }
             });
         }
 
-        // --- GeoJSON Handling ---
+        // --- GeoJSON Handling (Same as before) ---
         function handleGeoJsonUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -178,90 +245,68 @@ WHOLESALES,16.521942,102.220452`;
                     const geoData = JSON.parse(e.target.result);
                     geoJsonLayer.clearLayers(); 
 
-                    // GeoJSON -> Puts in 'shapesPane' (Bottom)
                     const geoLayer = L.geoJSON(geoData, {
-                        pane: 'shapesPane',
+                        pane: 'shapesPane', // Bottom layer
                         style: function(feature) {
-                            let color = "#3388ff"; 
-                            let fillColor = "#3388ff";
-                            let fillOpacity = 0.4; 
-
+                            let color = "#64748b"; // Default Slate
+                            let fillColor = "#64748b";
+                            
+                            // Color Logic
                             if (feature.properties) {
-                                // 1. Try explicit properties
-                                const potentialColor = feature.properties.color || 
-                                                       feature.properties.fill || 
-                                                       feature.properties.fillColor || 
-                                                       feature.properties.stroke || 
-                                                       feature.properties.hex;
-                                
-                                if (potentialColor && (potentialColor.startsWith('#') || potentialColor.startsWith('rgb'))) {
-                                    color = potentialColor;
-                                    fillColor = potentialColor;
-                                } else {
-                                    // 2. Scan properties for hex
-                                    for (const key in feature.properties) {
-                                        const val = String(feature.properties[key]);
-                                        if (val.match(/^#([0-9A-F]{3}){1,2}$/i)) {
-                                            color = val;
-                                            fillColor = val;
-                                            break;
-                                        }
-                                    }
-                                    // 3. Fallback color names
-                                    if (color === "#3388ff") {
-                                        const propsStr = JSON.stringify(feature.properties).toLowerCase();
-                                        if (propsStr.includes("red")) { color = "#ff0000"; fillColor = "#ff0000"; }
-                                        else if (propsStr.includes("green")) { color = "#00ff00"; fillColor = "#00ff00"; }
-                                        else if (propsStr.includes("white")) { color = "#ffffff"; fillColor = "#ffffff"; }
-                                    }
-                                }
+                                const propsStr = JSON.stringify(feature.properties).toLowerCase();
+                                const potentialColor = feature.properties.color || feature.properties.hex;
+
+                                if (potentialColor && potentialColor.startsWith('#')) {
+                                    color = potentialColor; fillColor = potentialColor;
+                                } else if (propsStr.includes("red")) { color = "#ef4444"; fillColor = "#ef4444"; }
+                                else if (propsStr.includes("green")) { color = "#22c55e"; fillColor = "#22c55e"; }
+                                else if (propsStr.includes("white")) { color = "#ffffff"; fillColor = "#ffffff"; }
                             }
                             
                             return {
                                 color: color,
                                 fillColor: fillColor,
                                 weight: 2,
-                                opacity: 1,
-                                fillOpacity: fillOpacity
+                                opacity: 0.8,
+                                fillOpacity: 0.2
                             };
                         },
-                        onEachFeature: function(feature, layer) {
-                            if (feature.properties) {
-                                let popupContent = "<div class='text-sm'>";
-                                for (const [key, value] of Object.entries(feature.properties)) {
-                                    popupContent += `<b>${key}:</b> ${value}<br>`;
-                                }
-                                popupContent += "</div>";
-                                layer.bindPopup(popupContent);
-                            }
+                        onEachFeature: (f, l) => {
+                            if(f.properties) l.bindPopup(`<pre class="text-xs">${JSON.stringify(f.properties,null,2)}</pre>`);
                         }
                     }).addTo(geoJsonLayer);
 
-                    if (geoLayer.getBounds().isValid()) {
-                        map.fitBounds(geoLayer.getBounds());
-                    }
-                    
-                    document.getElementById('statusMsg').innerText += " | เพิ่ม Shape แล้ว";
+                    if (geoLayer.getBounds().isValid()) map.fitBounds(geoLayer.getBounds());
+                    document.getElementById('statusRight').innerText = "เพิ่ม Shape File แล้ว";
 
                 } catch (err) {
                     console.error(err);
-                    alert("เกิดข้อผิดพลาดในการอ่านไฟล์ GeoJSON/JSON");
+                    alert("Error parsing GeoJSON");
                 }
             };
             reader.readAsText(file);
         }
 
-        function loadSampleData() {
+        // Sample Data Helper
+        const sampleCsvData = `customer_type_makro,lat_w_makro,lon_w_makro
+SAMPLE,16.455621,102.84292
+SAMPLE,16.481295,102.839017
+SAMPLE,16.488055,102.815405
+SAMPLE,16.515662,102.295329
+SAMPLE,16.521942,102.220452`;
+
+        function loadSampleToRed() {
             Papa.parse(sampleCsvData, {
                 header: true,
                 skipEmptyLines: true,
                 complete: function(results) {
-                    plotCsvData(results.data);
+                    plotData('red', results.data);
                 }
             });
         }
-
-        window.onload = loadSampleData;
+        
+        // Init
+        window.onload = loadSampleToRed;
 
     </script>
 </body>
