@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Sarabun', sans-serif; }
-        #map { height: 65vh; z-index: 1; }
+        #map { height: 100%; z-index: 1; } /* Adjusted height to fill remaining space */
         /* Custom scrollbar for controls if needed on small screens */
         .controls-container::-webkit-scrollbar { height: 6px; }
         .controls-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -20,16 +20,24 @@
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
     <!-- Header & Controls -->
-    <header class="bg-white shadow-md z-20 flex-none">
+    <header class="bg-white shadow-md z-20 flex-none transition-all duration-300">
         <div class="bg-blue-600 text-white p-2 px-4 flex justify-between items-center">
             <h1 class="text-lg font-bold flex items-center gap-2">
                 📍 Coverage Comparison Map
             </h1>
-            <div class="text-xs text-blue-100 hidden sm:block">เปรียบเทียบรัศมีพื้นที่ให้บริการ</div>
+            <div class="flex items-center gap-3">
+                <div class="text-xs text-blue-100 hidden sm:block">เปรียบเทียบรัศมีพื้นที่ให้บริการ</div>
+                <!-- Toggle Button -->
+                <button onclick="toggleControls()" id="toggleBtn" class="bg-blue-700 hover:bg-blue-800 text-white p-1 rounded focus:outline-none transition-colors border border-blue-500" title="ซ่อน/แสดง แผงควบคุม">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
         </div>
 
-        <!-- Controls Area -->
-        <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 border-b">
+        <!-- Controls Area (Added ID for toggling) -->
+        <div id="controlsPanel" class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 border-b">
             
             <!-- Control Group 1: RED -->
             <div class="bg-white p-3 rounded-lg shadow-sm border-l-4 border-red-500">
@@ -108,6 +116,30 @@
     </div>
 
     <script>
+        // --- Toggle Controls Function ---
+        function toggleControls() {
+            const panel = document.getElementById('controlsPanel');
+            const btn = document.getElementById('toggleBtn');
+            const isHidden = panel.classList.contains('hidden');
+
+            if (isHidden) {
+                // Show
+                panel.classList.remove('hidden');
+                // Change icon to Up arrow
+                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" /></svg>`;
+            } else {
+                // Hide
+                panel.classList.add('hidden');
+                // Change icon to Down arrow
+                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>`;
+            }
+
+            // Important: Tell Leaflet to resize the map after the layout change
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 50);
+        }
+
         // --- 1. Map Initialization ---
         const map = L.map('map').setView([16.4322, 102.8236], 9); // Centered on Khon Kaen
 
@@ -251,7 +283,7 @@
                             // Default styling
                             let color = "#3388ff"; 
                             let fillColor = "#3388ff";
-                            let fillOpacity = 1;
+                            let fillOpacity = 0.2;
                             
                             if (feature.properties) {
                                 // 1. Try explicit properties
